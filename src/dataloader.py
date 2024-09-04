@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from torchvision.io import read_image
+from torchvision.io import ImageReadMode, read_image
 import matplotlib.pyplot as plt
 
 import config
@@ -45,13 +45,11 @@ class customDataset(Dataset):
         self.label_array = lc.encode(label)
 
         image_names = os.listdir(config.train_path)
-        image_names.sorted()
-        print(image_names)
-        self.image_array = [read_image(os.path.join(config.train_path, i))[:,:,0] for i in image_names]
-        self.image_array = [self.transform(image) for image in self.image_array]
+        image_names.sort()
+        self.image_array = [read_image(os.path.join(config.train_path, i), mode=ImageReadMode.GRAY)/255 for i in image_names]
 
     def __len__(self):
-        return self.image_array.shape[0]
+        return len(self.image_array)
     
     def __getitem__(self, idx):
         return {'image':self.image_array[idx], 'label': self.label_array[idx]}
