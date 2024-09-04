@@ -36,3 +36,22 @@ class labelconverter():
         label_array = np.argmax(label_array, axis=1)
         label_list = [self.decode_dict(label_list[l]) for l in label_array]
         return label_list
+
+class customDataset(Dataset):
+    def __init__(self):
+        table = pd.read_table(os.path.join(config.data_path, 'train_master.tsv'))
+        label = table['expression'].tolist()
+        lc = labelconverter(label)
+        self.label_array = lc.encode(label)
+
+        image_names = os.listdir(config.train_path)
+        image_names.sorted()
+        print(image_names)
+        self.image_array = [read_image(os.path.join(config.train_path, i))[:,:,0] for i in image_names]
+        self.image_array = [self.transform(image) for image in self.image_array]
+
+    def __len__(self):
+        return self.image_array.shape[0]
+    
+    def __getitem__(self, idx):
+        return {'image':self.image_array[idx], 'label': self.label_array[idx]}
