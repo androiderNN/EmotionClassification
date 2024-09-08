@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision.io import ImageReadMode, read_image
-import matplotlib.pyplot as plt
+import albumentations as albu
 
 import config
 
@@ -47,7 +47,8 @@ class labelconverter():
         return label_list
 
 class customDataset(Dataset):
-    def __init__(self, image, label, index):
+    def __init__(self, image, label, index, aug_fn=None):
+        self.transform = aug_fn
         self.image_array = [image for idx, image in enumerate(image) if idx in index]
         self.label_array = [label for idx, label in enumerate(label) if idx in index]
 
@@ -57,8 +58,22 @@ class customDataset(Dataset):
     def __getitem__(self, idx):
         image = self.image_array[idx]
         label = self.label_array[idx]
+
+        if self.transform:
+            image = self.transform(image=image.detach().numpy()[0])['image']
+            image = torch.from_numpy(image[np.newaxis,:,:].astype(np.float32))
         # return {'image':image, 'label': label}
         return (image, label)
+
+def get_augmentations():
+    transforms = albu.Compose([
+        albu.HorizontalFlip(p=1),
+        albu.ElasticTransform(),
+        # albu.crop(x_min=16, x_max=112, y_min=16, y_max=104)
+        albu.RandomResizedCrop(height=128, width=120, scale=(0.6,1.0), ratio=(0.9,1.1)),
+        albu.Rotate(limit=(-10,10))
+    ])
+    return transforms
 
 def get_dataloaders(train_size=0.7, valid_size=0.3, test_size=1e-10, batch_size=10):
     if train_size+valid_size+test_size>(1+1e-10):
@@ -82,7 +97,9 @@ def get_dataloaders(train_size=0.7, valid_size=0.3, test_size=1e-10, batch_size=
 
     # dataloader作成
     index_array = [train_index, valid_index, test_index]
-    datasets = [customDataset(image_array, label_array, i) for i in index_array]
+    datasets = [customDataset(image_array, label_array, index=index_array[0], aug_fn=get_augmentations()), \
+                customDataset(image_array, label_array, index=index_array[1]), \
+                customDataset(image_array, label_array, index=index_array[2])]
     dataloaders = [DataLoader(ds, batch_size) for ds in datasets]
 
     return dataloaders
