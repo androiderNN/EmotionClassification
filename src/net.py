@@ -54,6 +54,9 @@ class simpleConvNet(nn.Module):
 def train_loop(dataloader, model, loss_fn, optimizer):
     model.train()
     size = len(dataloader.dataset)
+
+    correct = 0
+
     for batch, (x, y) in enumerate(dataloader):
         pred = model(x)
         loss = loss_fn(pred, y)
@@ -62,9 +65,14 @@ def train_loop(dataloader, model, loss_fn, optimizer):
         loss.backward()
         optimizer.step()
 
-        if batch%10 == 0:
+        size = len(dataloader.dataset)
+        correct += (pred.argmax(1)==y).type(torch.float).sum().item()
+
+        if batch%100 == 0:
             loss, current = loss.item(), batch*len(x)
             print(f'loss: {loss} [{current}/{size}]')
+
+    print(f'train accuracy: {correct/size}')
 
 def test_loop(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
@@ -78,18 +86,19 @@ def test_loop(dataloader, model, loss_fn):
         
     test_loss /= size
     correct /= size
-    print(f'test error: {test_loss}\naccuracy: {correct}\n')
+    print(f'test loss: {test_loss}\naccuracy: {correct}\n')
 
 if __name__=='__main__':
     train_params = {
-        'lr': 1e-2,
-        'batch_size': 100,
-        'epochs':10
+        'lr': 1e-3,
+        'batch_size': 10,
+        'epochs':20
     }
 
     model = simpleConvNet()
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=train_params['lr'])
+    # optimizer = torch.optim.SGD(model.parameters(), lr=train_params['lr'])
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=train_params['lr'])
     
     train_dataloader, valid_dataloader, _ = dataloader.get_dataloaders(batch_size=train_params['batch_size'])
 

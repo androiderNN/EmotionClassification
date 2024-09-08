@@ -60,8 +60,8 @@ class customDataset(Dataset):
         # return {'image':image, 'label': label}
         return (image, label)
 
-def get_dataloaders(train_size=0.8, valid_size=0.1, test_size=0.1, batch_size=10):
-    if train_size+valid_size+test_size>1:
+def get_dataloaders(train_size=0.7, valid_size=0.3, test_size=1e-10, batch_size=10):
+    if train_size+valid_size+test_size>(1+1e-10):
         raise ValueError
 
     # 画像の読み込みと格納
