@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets
+import matplotlib.pyplot as plt
 
 import config, dataloader
 
@@ -52,9 +53,11 @@ class simpleConvNet(nn.Module):
         return self.conv_stack(x)
 
 def train_loop(dataloader, model, loss_fn, optimizer):
+    '''
+    1エポック学習を行う
+    returnは正解率'''
     model.train()
     size = len(dataloader.dataset)
-
     correct = 0
 
     for batch, (x, y) in enumerate(dataloader):
@@ -68,13 +71,15 @@ def train_loop(dataloader, model, loss_fn, optimizer):
         size = len(dataloader.dataset)
         correct += (pred.argmax(1)==y).type(torch.float).sum().item()
 
-        if batch%100 == 0:
-            loss, current = loss.item(), batch*len(x)
-            print(f'loss: {loss} [{current}/{size}]')
+    loss = loss.item()
+    correct /= size
+    print(f'train loss: {loss} \ntrain accuracy: {correct}')
 
-    print(f'train accuracy: {correct/size}')
+    return correct  # accuracy
 
 def test_loop(dataloader, model, loss_fn):
+    '''
+    バリデーションデータによる評価を行う'''
     size = len(dataloader.dataset)
     test_loss, correct = 0, 0
 
@@ -86,14 +91,18 @@ def test_loop(dataloader, model, loss_fn):
         
     test_loss /= size
     correct /= size
-    print(f'test loss: {test_loss}\naccuracy: {correct}\n')
+    print(f'test loss: {test_loss}\ntest accuracy: {correct}\n')
 
-if __name__=='__main__':
+    return correct
+
+def main(lr=1e-3, batch_size=10, epoch=100):
     train_params = {
-        'lr': 1e-3,
-        'batch_size': 10,
-        'epochs':20
+        'lr': lr,
+        'batch_size': batch_size,
+        'epochs':epoch
     }
+
+    train_accuracy, valid_accuracy = list(), list()
 
     model = simpleConvNet()
     loss_fn = nn.CrossEntropyLoss()
@@ -104,5 +113,16 @@ if __name__=='__main__':
 
     for e in range(train_params['epochs']):
         print(f'epoch {e}')
-        train_loop(train_dataloader, model, loss_fn, optimizer)
-        test_loop(valid_dataloader, model, loss_fn)
+        tr_acc = train_loop(train_dataloader, model, loss_fn, optimizer)
+        va_acc = test_loop(valid_dataloader, model, loss_fn)
+
+        train_accuracy.append(tr_acc)
+        valid_accuracy.append(va_acc)
+    
+    return [train_accuracy, valid_accuracy]
+
+if __name__=='__main__':
+    log = main(epoch=200)
+    plt.plot(log[0], label='train accuracy')
+    plt.plot(log[1], label='valid accuracy')
+    plt.show()
